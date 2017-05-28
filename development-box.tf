@@ -43,4 +43,19 @@ resource "google_compute_instance" "development-box" {
     private_key = "${file("keys/id_rsa")}"
   }
 
+  provisioner "file" {
+    source = "keys/github_rsa"
+    destination = "~/.ssh/id_rsa"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod 600 .ssh/id_rsa",
+      # don't verify github as a host
+      "echo -e \"Host github.com\n\tStrictHostKeyChecking no\n\" >> ~/.ssh/config",
+      # create project dir and clone repositories
+      "mkdir projects && cd projects",
+      "for repo in ${join(" ", var.git_repositories)}; do git clone $repo; done"
+    ]
+  }
 }
