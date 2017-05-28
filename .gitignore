@@ -1,0 +1,4 @@
+account.json
+*.tfstate*
+config.tf
+keys/*
