@@ -45,7 +45,7 @@ resource "google_compute_instance" "development-box" {
   name        = "development-box"
   description = "Micro instance for development"
 
-  machine_type = "f1-micro"
+  machine_type = "g1-small"
   zone         = "us-west1-a"
 
   disk = {
