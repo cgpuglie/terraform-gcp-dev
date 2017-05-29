@@ -4,24 +4,34 @@ provider "google" {
   region      = "us-west1"
 }
 
-# this isn't necessary, but doesn't hurt to be explicit
+resource "google_compute_network" "development" {
+  name = "development"
+}
+
+# development subnet for docker and nodejs
+resource "google_compute_subnetwork" "node-docker" {
+  name          = "node-docker"
+  network       = "${google_compute_network.development.name}"
+  ip_cidr_range = "10.138.0.0/20"
+}
+
+# will be added for entire network
 resource "google_compute_firewall" "allow-ssh" {
   name        = "allow-ssh"
   description = "allow inbound ssh connectivity"
-  network     = "default"
+  network     = "${google_compute_network.development.name}"
 
   allow {
     protocol = "tcp"
     ports    = ["22"]
   }
-
-  target_tags = ["allow-ssh"]
 }
 
+# will be added for subnet
 resource "google_compute_firewall" "allow-node" {
   name        = "allow-node"
   description = "allow inbound connectivity for done apps"
-  network     = "default"
+  network     = "${google_compute_network.development.name}"
 
   allow {
     protocol = "tcp"
@@ -39,16 +49,15 @@ resource "google_compute_instance" "development-box" {
   zone         = "us-west1-a"
 
   disk = {
-    image = "coreos-stable-1298-6-0-v20170315"
+    image = "coreos-alpha-1423-0-0-v20170525"
   }
 
   network_interface = {
-    network       = "default"
-    access_config = {}
+    subnetwork = "${google_compute_subnetwork.node-docker.name}"
+    access_config {}
   }
 
   tags = [
-    "allow-ssh",
     "allow-node"
   ]
 
@@ -59,12 +68,12 @@ resource "google_compute_instance" "development-box" {
   }
 
   provisioner "file" {
-    source = "keys/github_rsa"
+    source      = "keys/github_rsa"
     destination = "~/.ssh/id_rsa"
   }
 
   provisioner "file" {
-    source = "files/.bashrc"
+    source      = "files/.bashrc"
     destination = "~/.devrc"
   }
 
@@ -76,6 +85,10 @@ resource "google_compute_instance" "development-box" {
 
       # replace bashrc with custom
       "mv -f ~/.devrc ~/.bashrc",
+      
+      # install nvm and nodejs
+      "curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash && NVM_DIR=\"$HOME/.nvm\" && \\. \"$NVM_DIR/nvm.sh\"",
+      "nvm install v7.2.0",
 
       # don't verify github fingerprint
       "echo -e \"Host github.com\n\tStrictHostKeyChecking no\n\" >> ~/.ssh/config",
