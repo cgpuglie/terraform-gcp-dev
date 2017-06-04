@@ -11,7 +11,7 @@ You've added a Service Account
 You've configured an SSH key for your servers
 
 ### Usage
-Create keys directory containing id_rsa (ssh private key)
+Create keys directory containing id_rsa (ssh private key for github and gce servers)
 
 Download account.json file for GCP project for authentication
 
@@ -34,6 +34,16 @@ variable "git_repositories" {
     "git@github.com:cgpuglie/GCP-Terraform-DockerSwarm.git"
   ]
 }
+
+# dev vm counts - reducing to 0 will destroy machines, but leave other objects intact
+variable "development-count" {
+  default = 1
+}
+
+# worker vm counts - for swarm mode
+variable "development-worker-count" {
+  default = 0
+}
 ```
 
 Run Terraform
@@ -46,4 +56,10 @@ docker run -it \
   -v$PWD:/data \
   -w/data \
   hashicorp/terraform:light apply
+```
+
+Export the dev IP as a variable for later use if desired
+TODO: add replica ips to output
+```
+export devIp=`terraform output development-box-ip`
 ```
