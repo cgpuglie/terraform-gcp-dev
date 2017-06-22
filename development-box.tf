@@ -1,3 +1,10 @@
+terraform {
+  backend "gcs" {
+    bucket      = "cp-terraform-state"
+    path        = "swarm-dev/terraform.tfstate"
+  }
+}
+
 provider "google" {
   credentials = "${ file("account.json") }"
   project     = "${var.project_id}"
@@ -130,7 +137,7 @@ resource "google_compute_instance" "development-worker" {
   description = "Docker Swarm Worker Node - Joins main"
 
   count        = "${var.development-worker-count}"
-  machine_type = "g1-small"
+  machine_type = "n1-standard-1"
   zone         = "us-west1-a"
 
   disk = {

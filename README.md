@@ -45,19 +45,24 @@ variable "development-worker-count" {
   default = 0
 }
 ```
+#### Initialize backend
+```bash
+terraform init -backend-config="credentials=$(cat account.json | jq -c)"
+```
 
-Run Terraform
+#### Run Terraform
 ```bash
 terraform apply
 ```
-OR
+#### Using Docker
+If you have docker installed, you can run terraform commands with the official docker image.
 ```bash
 docker run -it \
   -v$PWD:/data \
   -w/data \
-  hashicorp/terraform:light apply
+  hashicorp/terraform:light [COMMAND]
 ```
-
+#### Exporting the master IP
 Export the dev IP as a variable for later use if desired
 TODO: add replica ips to output
 ```
