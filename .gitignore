@@ -1,4 +1,5 @@
-account.json
 *.tfstate*
 config.tf
 keys/*
+.vscode
+*secret*
