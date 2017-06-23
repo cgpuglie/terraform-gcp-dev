@@ -1,7 +1,7 @@
-resource "google_compute_instance" "development-main" {
-  name        = "development-main-${count.index}"
-  description = "Micro instance for development"
-  count       = "${var.development-count}" # reduce to 0 to incur no costs
+resource "google_compute_instance" "swarm-manager" {
+  name        = "swarm-manager-${count.index}"
+  description = "Docker Swarm Manager"
+  count       = "${var.swarm-manager-count}" # reduce to 0 to incur no costs
 
   machine_type = "g1-small"
   zone         = "us-west1-a"
@@ -62,11 +62,11 @@ resource "google_compute_instance" "development-main" {
   }
 }
 
-resource "google_compute_instance" "development-worker" {
-  name        = "development-worker-${count.index}"
-  description = "Docker Swarm Worker Node - Joins main"
+resource "google_compute_instance" "swarm-worker" {
+  name        = "swarm-worker-${count.index}"
+  description = "Docker Swarm Worker Node"
 
-  count        = "${var.development-worker-count}"
+  count        = "${var.swarm-worker-count}"
   machine_type = "g1-small"
   zone         = "us-west1-a"
 
@@ -110,12 +110,17 @@ resource "google_compute_instance" "development-worker" {
       "mv -f ~/.devrc ~/.bashrc",
       
       # join managers swarm, requires ssh between manager and worker to get token
-      "sudo docker swarm join --token $(ssh -o StrictHostKeyChecking=no ${var.remote_user}@${google_compute_instance.development-main.network_interface.0.access_config.0.assigned_nat_ip} 'sudo docker swarm join-token -q worker') ${google_compute_instance.development-main.network_interface.0.address}:2377;"
+      "sudo docker swarm join --token $(ssh -o StrictHostKeyChecking=no ${var.remote_user}@${google_compute_instance.swarm-manager.0.network_interface.0.access_config.0.assigned_nat_ip} 'sudo docker swarm join-token -q worker') ${google_compute_instance.swarm-manager.0.network_interface.0.address}:2377;"
     ]
   }
 
 }
 
-output "development-box-ip" {
-  value = "${google_compute_instance.development-main.network_interface.0.access_config.0.assigned_nat_ip}"
+output "swarm-manager-ips" {
+  value = ["${google_compute_instance.swarm-manager.*.network_interface.0.access_config.0.assigned_nat_ip}"]
 }
+
+output "swarm-worker-ips" {
+  value = ["${google_compute_instance.swarm-worker.*.network_interface.0.access_config.0.assigned_nat_ip}"]
+}
+
