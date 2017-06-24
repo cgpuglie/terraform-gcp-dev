@@ -44,9 +44,6 @@ resource "google_compute_instance" "swarm-manager" {
 
       # replace bashrc with custom
       "mv -f ~/.devrc ~/.bashrc",
-      
-      # initialize a swarm
-      "docker swarm init",
 
       # install nvm and nodejs
       "curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash && NVM_DIR=\"$HOME/.nvm\" && \\. \"$NVM_DIR/nvm.sh\"",
@@ -107,13 +104,28 @@ resource "google_compute_instance" "swarm-worker" {
       "chmod 600 .ssh/id_rsa",
 
       # replace bashrc with custom
-      "mv -f ~/.devrc ~/.bashrc",
-      
-      # join managers swarm, requires ssh between manager and worker to get token
-      "sudo docker swarm join --token $(ssh -o StrictHostKeyChecking=no ${var.remote_user}@${google_compute_instance.swarm-manager.0.network_interface.0.access_config.0.assigned_nat_ip} 'sudo docker swarm join-token -q worker') ${google_compute_instance.swarm-manager.0.network_interface.0.address}:2377;"
+      "mv -f ~/.devrc ~/.bashrc"
     ]
   }
+}
 
+resource "null_resource" "run_ansible" {
+  triggers {
+    cluster_instance_ids = "${join(",", google_compute_instance.swarm-manager.*.id)}, ${join(",", google_compute_instance.swarm-worker.*.id)}"
+  }
+
+  provisioner "local-exec" {
+    # command = "echo '[swarm-manager] \n ${join("\n", ${google_compute_instance.swarm-manager.*.network_interface.0.access_config.0.assigned_nat_ip})} \n\n [swarm-worker] \n ${join("\n", ${google_compute_instance.swarm-worker.*.network_interface.0.access_config.0.assigned_nat_ip})}' > inventory.ans"
+    command = <<EOF
+    cat <<INV > swarm-hosts
+[swarm-manager]
+${join("\n", google_compute_instance.swarm-manager.*.network_interface.0.access_config.0.assigned_nat_ip)}
+
+[swarm-worker]
+${join("\n", google_compute_instance.swarm-worker.*.network_interface.0.access_config.0.assigned_nat_ip)}
+INV
+EOF
+  }
 }
 
 output "swarm-manager-ips" {
